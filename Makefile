@@ -28,6 +28,13 @@ $(APP_NAME).app:
 
 install: build
 	cp -R $(APP_NAME).app /Applications/
+	osascript -e 'tell application "System Events" to make login item at end with properties {path:"/Applications/$(APP_NAME).app", hidden:false}'
+	@echo "$(APP_NAME) installed to Applications and added to login items"
+
+uninstall:
+	rm -rf /Applications/$(APP_NAME).app
+	osascript -e 'tell application "System Events" to delete login item "$(APP_NAME)"' 2>/dev/null || true
+	@echo "$(APP_NAME) removed from Applications and login items"
 
 run: build
 	open $(APP_NAME).app
@@ -36,4 +43,4 @@ clean:
 	rm -rf $(APP_NAME).app
 	rm -f $(APP_NAME)
 
-.PHONY: build install run clean
+.PHONY: build install uninstall run clean
