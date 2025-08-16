@@ -4,6 +4,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem!
     var breatheView: BreatheView!
     var statusMenu: NSMenu!
+    var chimeTimer: Timer?
+    var isChimeMuted: Bool = true
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -12,6 +14,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Create the menu
         statusMenu = NSMenu()
+        
+        let muteItem = NSMenuItem(title: isChimeMuted ? "Unmute Chime" : "Mute Chime", action: #selector(toggleChimeMute), keyEquivalent: "")
+        muteItem.target = self
+        statusMenu.addItem(muteItem)
+        
+        statusMenu.addItem(NSMenuItem.separator())
+        
         let closeItem = NSMenuItem(title: "Close", action: #selector(closeApp), keyEquivalent: "")
         closeItem.target = self
         statusMenu.addItem(closeItem)
@@ -31,6 +40,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             statusButton.action = #selector(statusBarButtonClicked)
             statusButton.target = self
         }
+        
+        playChimeSound()
+        startChimeTimer()
     }
     
     @objc func statusBarButtonClicked() {
@@ -39,11 +51,53 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
+    @objc func toggleChimeMute() {
+        isChimeMuted.toggle()
+        updateMuteMenuItem()
+    }
+    
+    private func updateMuteMenuItem() {
+        if let muteItem = statusMenu.items.first {
+            muteItem.title = isChimeMuted ? "Unmute Chime" : "Mute Chime"
+        }
+    }
+    
     @objc func closeApp() {
         NSApplication.shared.terminate(self)
     }
     
+    private func startChimeTimer() {
+        chimeTimer = Timer.scheduledTimer(withTimeInterval: 15 * 60, repeats: true) { [weak self] _ in
+            self?.playChimeSound()
+        }
+    }
+    
+    @objc private func playChimeSound() {
+        guard !isChimeMuted else {
+            print("Chime is muted, skipping sound")
+            return
+        }
+        
+        guard let soundPath = Bundle.main.path(forResource: "chime", ofType: "mp3") else {
+            print("Error: Could not find chime.mp3 in bundle")
+            return
+        }
+        
+        print("Found chime file at: \(soundPath)")
+        
+        guard let sound = NSSound(contentsOfFile: soundPath, byReference: false) else {
+            print("Error: Could not create NSSound from chime file")
+            return
+        }
+        
+        print("Playing chime...")
+        sound.volume = 1.0
+        let success = sound.play()
+        print("Chime play result: \(success)")
+    }
+    
     func applicationWillTerminate(_ notification: Notification) {
         breatheView?.stopAnimation()
+        chimeTimer?.invalidate()
     }
 }

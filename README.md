@@ -2,6 +2,12 @@
 
 A simple macOS menu bar application that displays an animated breathing circle to guide mindful breathing using the 4-7-8 pattern.
 
+## Features
+
+- **Animated breathing guide**: Visual circle animation following the 4-7-8 breathing pattern
+- **Reminder chime**: Optional audio reminder every 15 minutes to prompt mindful breathing
+- **Mute control**: Click the menu bar item to toggle the chime on/off (muted by default)
+
 ## Usage
 
 ### Build and Run
