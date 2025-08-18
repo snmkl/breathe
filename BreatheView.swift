@@ -2,59 +2,21 @@ import Cocoa
 
 class BreatheView: NSView {
     private var timer: Timer?
-    private var animationStartTime: Date = Date()
-    private let cycleDuration: TimeInterval = 19.0  // 4-7-4-4 breathing pattern
-    private let minSize: CGFloat = 4.0
-    private let maxSize: CGFloat = 12.0
-    private var lastDotSize: CGFloat = 0.0
-    private var isInStaticPhase: Bool = false
-    
-    private let phase1Duration: Double = 4.0/19.0  // Inhale: 4 seconds
-    private let phase2Duration: Double = 7.0/19.0  // Hold big: 7 seconds  
-    private let phase3Duration: Double = 4.0/19.0  // Exhale: 4 seconds
-    private let phase4Duration: Double = 4.0/19.0  // Hold small: 4 seconds
-    
-    private var cachedCenterX: CGFloat = 0
-    private var cachedCenterY: CGFloat = 0
-    private var lastBounds: CGRect = .zero
-    
-    private lazy var fillColor = NSColor.labelColor.cgColor
+    private var startTime = Date()
+    private var lastSize: CGFloat = 0
     
     func startAnimation() {
-        animationStartTime = Date()
-        lastDotSize = 0.0
-        isInStaticPhase = false
-        updateCachedCenter()
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0/6.0, repeats: true) { [weak self] _ in
-            self?.checkAndRedraw()
+        startTime = Date()
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0/6.0, repeats: true) { _ in
+            let elapsed = Date().timeIntervalSince(self.startTime)
+            let progress = elapsed.truncatingRemainder(dividingBy: 19.0) / 19.0
+            let currentSize = self.calculateSize(progress: progress)
+            
+            if abs(currentSize - self.lastSize) > 0.001 {
+                self.lastSize = currentSize
+                self.needsDisplay = true
+            }
         }
-    }
-    
-    private func updateCachedCenter() {
-        if lastBounds != bounds {
-            cachedCenterX = bounds.width / 2
-            cachedCenterY = bounds.height / 2
-            lastBounds = bounds
-        }
-    }
-    
-    private func checkAndRedraw() {
-        let elapsed = Date().timeIntervalSince(animationStartTime)
-        let cycleProgress = (elapsed.truncatingRemainder(dividingBy: cycleDuration)) / cycleDuration
-        let currentDotSize = calculateDotSize(for: cycleProgress)
-        
-        let isCurrentlyStatic = isStaticPhase(cycleProgress)
-        
-        if !isInStaticPhase || !isCurrentlyStatic || abs(currentDotSize - lastDotSize) > 0.001 {
-            lastDotSize = currentDotSize
-            isInStaticPhase = isCurrentlyStatic
-            needsDisplay = true
-        }
-    }
-    
-    private func isStaticPhase(_ progress: Double) -> Bool {
-        return (progress >= phase1Duration && progress < (phase1Duration + phase2Duration)) ||
-               (progress >= (phase1Duration + phase2Duration + phase3Duration) && progress < 1.0)
     }
     
     func stopAnimation() {
@@ -67,16 +29,17 @@ class BreatheView: NSView {
         
         guard let context = NSGraphicsContext.current?.cgContext else { return }
         
-        updateCachedCenter()
+        let size = lastSize
         
-        let outerRadius = lastDotSize * 0.6
+        let center = CGPoint(x: bounds.width / 2, y: bounds.height / 2)
+        let outerRadius = size * 0.6
         let innerRadius = outerRadius * 0.6
         
-        context.setFillColor(fillColor)
+        context.setFillColor(NSColor.labelColor.cgColor)
         
-        let outerRect = CGRect(x: cachedCenterX - outerRadius, y: cachedCenterY - outerRadius, 
+        let outerRect = CGRect(x: center.x - outerRadius, y: center.y - outerRadius, 
                               width: outerRadius * 2, height: outerRadius * 2)
-        let innerRect = CGRect(x: cachedCenterX - innerRadius, y: cachedCenterY - innerRadius,
+        let innerRect = CGRect(x: center.x - innerRadius, y: center.y - innerRadius,
                               width: innerRadius * 2, height: innerRadius * 2)
         
         context.addEllipse(in: outerRect)
@@ -84,32 +47,28 @@ class BreatheView: NSView {
         context.fillPath(using: .evenOdd)
     }
     
-    private func calculateDotSize(for progress: Double) -> CGFloat {
+    private func calculateSize(progress: Double) -> CGFloat {
+        let minSize: CGFloat = 4.0
+        let maxSize: CGFloat = 12.0
+        
         switch progress {
-        case 0..<phase1Duration:
-            // Inhale (4s): grow from min to max
-            let inhaleProgress = progress / phase1Duration
-            let easeProgress = easeInOutQuad(inhaleProgress)
-            return minSize + (maxSize - minSize) * CGFloat(easeProgress)
+        case 0..<(4.0/19.0):
+            // Inhale (4s)
+            let t = progress / (4.0/19.0)
+            return minSize + (maxSize - minSize) * CGFloat(t)
             
-        case phase1Duration..<(phase1Duration + phase2Duration):
-            // Hold big (7s): stay at max size
+        case (4.0/19.0)..<(11.0/19.0):
+            // Hold (7s)
             return maxSize
             
-        case (phase1Duration + phase2Duration)..<(phase1Duration + phase2Duration + phase3Duration):
-            // Exhale (4s): shrink from max to min
-            let exhaleStart = phase1Duration + phase2Duration
-            let exhaleProgress = (progress - exhaleStart) / phase3Duration
-            let easeProgress = easeInOutQuad(exhaleProgress)
-            return maxSize - (maxSize - minSize) * CGFloat(easeProgress)
+        case (11.0/19.0)..<(15.0/19.0):
+            // Exhale (4s)
+            let t = (progress - 11.0/19.0) / (4.0/19.0)
+            return maxSize - (maxSize - minSize) * CGFloat(t)
             
         default:
-            // Hold small (4s): stay at min size
+            // Hold (4s)
             return minSize
         }
-    }
-    
-    private func easeInOutQuad(_ t: Double) -> Double {
-        return t < 0.5 ? 2 * t * t : 1 - pow(-2 * t + 2, 2) / 2
     }
 }

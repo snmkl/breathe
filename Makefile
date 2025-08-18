@@ -9,7 +9,6 @@ $(APP_NAME).app:
 	mkdir -p $(APP_NAME).app/Contents/MacOS
 	mkdir -p $(APP_NAME).app/Contents/Resources
 	swiftc -o $(APP_NAME).app/Contents/MacOS/$(APP_NAME) $(SWIFT_FILES)
-	if [ -d "sounds" ]; then cp -R sounds/* $(APP_NAME).app/Contents/Resources/; fi
 	echo '<?xml version="1.0" encoding="UTF-8"?>' > $(APP_NAME).app/Contents/Info.plist
 	echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> $(APP_NAME).app/Contents/Info.plist
 	echo '<plist version="1.0">' >> $(APP_NAME).app/Contents/Info.plist
